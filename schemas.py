@@ -1,48 +1,61 @@
 """
 Database Schemas
 
-Define your MongoDB collection schemas here using Pydantic models.
-These schemas are used for data validation in your application.
+AmazingXO Data Model
 
-Each Pydantic model represents a collection in your database.
-Model name is converted to lowercase for the collection name:
-- User -> "user" collection
-- Product -> "product" collection
-- BlogPost -> "blogs" collection
+Each Pydantic model represents a collection in MongoDB.
+Collection name is the lowercase of the class name.
 """
+from typing import Optional, List, Literal
+from pydantic import BaseModel, Field, EmailStr
+from datetime import date
 
-from pydantic import BaseModel, Field
-from typing import Optional
-
-# Example schemas (replace with your own):
-
+# Core user/account
 class User(BaseModel):
-    """
-    Users collection schema
-    Collection name: "user" (lowercase of class name)
-    """
     name: str = Field(..., description="Full name")
-    email: str = Field(..., description="Email address")
-    address: str = Field(..., description="Address")
-    age: Optional[int] = Field(None, ge=0, le=120, description="Age in years")
-    is_active: bool = Field(True, description="Whether user is active")
+    email: EmailStr = Field(..., description="Email address")
+    avatar_url: Optional[str] = Field(None, description="Profile image URL")
+    role: Literal["owner","member"] = Field("owner", description="User role")
+    active: bool = Field(True, description="Active account flag")
 
-class Product(BaseModel):
-    """
-    Products collection schema
-    Collection name: "product" (lowercase of class name)
-    """
-    title: str = Field(..., description="Product title")
-    description: Optional[str] = Field(None, description="Product description")
-    price: float = Field(..., ge=0, description="Price in dollars")
-    category: str = Field(..., description="Product category")
-    in_stock: bool = Field(True, description="Whether product is in stock")
+class Membership(BaseModel):
+    user_email: EmailStr = Field(..., description="Linked user email")
+    plan: Literal["access","performance"] = Field(..., description="Plan type")
+    price_usd: float = Field(..., ge=0)
+    start_date: date = Field(...)
+    family_members: List[EmailStr] = Field(default_factory=list)
 
-# Add your own schemas here:
-# --------------------------------------------------
+# Protocols
+class Protocol(BaseModel):
+    kind: Literal["performance","recovery"] = Field(...)
+    name: str = Field(..., description="One-word name")
+    status: Literal["active","paused","completed"] = Field("active")
+    owner_email: EmailStr = Field(...)
 
-# Note: The Flames database viewer will automatically:
-# 1. Read these schemas from GET /schema endpoint
-# 2. Use them for document validation when creating/editing
-# 3. Handle all database operations (CRUD) directly
-# 4. You don't need to create any database endpoints!
+# Biomarkers and Indicators
+class Biomarker(BaseModel):
+    owner_email: EmailStr
+    name: Literal["Testosterone","Estradiol (E2)","SHBG","CRP","Fasting Insulin"]
+    value: float = Field(...)
+    unit: str = Field(...)
+    taken_on: date
+
+class Signal(BaseModel):
+    owner_email: EmailStr
+    domain: Literal["performance","recovery"]
+    name: Literal["Capacity","Power","Speed","Pressure","Efficiency","Inflammation","Fatigue","Electrolytes","Lymphatic","Glycogen"]
+    score: int = Field(..., ge=0, le=100)
+    noted_on: date
+
+# Logistics
+class Shipment(BaseModel):
+    owner_email: EmailStr
+    item: Literal["Protocol Kit","Prescription","Bloodwork Kit"]
+    status: Literal["queued","shipped","delivered"] = "queued"
+    tracking: Optional[str] = None
+
+class Integration(BaseModel):
+    owner_email: EmailStr
+    name: str
+    status: Literal["connected","disconnected"] = "disconnected"
+    metadata: Optional[dict] = None
